@@ -8,7 +8,7 @@
     <group name="General">
         <entry name="command" type="String">
             <label>Shell command to be executed</label>
-            <default>date +%s</default>
+            <default>echo -e "It works!\nCurrent time is `date +%H:%M:%S`"</default>
         </entry>
 	<entry name="interval" type="Int">
             <label>Interval between command execution</label>
