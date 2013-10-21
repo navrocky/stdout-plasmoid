@@ -1,54 +1,35 @@
-var outFilePath = '/dev/shm/stdout_plasmoid_out_' + (Math.random() * 100000).toFixed(0);
-var executedScript = '';
-
 // initialize form
+
 plasmoid.aspectRatioMode = IgnoreAspectRatio;
 layout = new LinearLayout(plasmoid);
 label = new Label();
 label.wordWrap = false;
 layout.addItem(label); 
 
-// create timer
-timer = new QTimer(plasmoid);
-timer.timeout.connect(updateData);
+var interval
+var script
 
-var receivedData = '';
+var dataUpdated = function(name, data) {
+	label.text = data.stdout;
+}
 
-readTimer = new QTimer(plasmoid);
-readTimer.singleShot = true;
-readTimer.timeout.connect(function () {
-  receivedData = '';
-  var job = plasmoid.getUrl(outFilePath);
-  job.data.connect(function (job, data) {
-    receivedData += data.toUtf8();
+function readConfig() {
+
+  if (script) {
+    dataEngine("executable").disconnectSource(script, dataUpdated);
+  }
+  
+  lazyStart = new QTimer(plasmoid);
+  lazyStart.singleShot = true;
+  lazyStart.timeout.connect(function () {
+	print("started")
+    script = plasmoid.readConfig('command');
+    interval = plasmoid.readConfig('interval')
+    dataEngine("executable").connectSource(script, dataUpdated, interval);
   });
-  job.finished.connect(function (job) {
-    label.text = receivedData.trim();
-  });
-});
+
+  lazyStart.start(1000)
+}
 
 plasmoid.configChanged = readConfig;
 
-function readConfig() {
-  timer.interval = plasmoid.readConfig('interval');
-  timer.stop();
-  timer.start();
-  executedScript = plasmoid.readConfig('command');
-}
-
-function updateData() {
-  execShellScript(executedScript + ' >' + outFilePath + ' 2>&1');
-  readTimer.start(timer.interval * 0.5);
-}
-
-function execShellScript(command) {
-  plasmoid.runCommand('/bin/bash',['-c', command]);
-}
-
-// remove old file
-execShellScript('rm ' + outFilePath + ' >/dev/null');
-
-// initial read config and start timer
-readConfig();
-
-updateData();
